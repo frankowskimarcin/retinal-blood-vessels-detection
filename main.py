@@ -2,6 +2,7 @@ import cv2
 from skimage import io, color
 from skimage.filters import frangi
 import numpy as np
+import matplotlib.pyplot as plt
 from PIL import Image
 
 
@@ -17,10 +18,12 @@ def resizeInputImage(dataDir, fileName, fovMaskDir, fovMaskFile):
     fovImage.save(fovMaskDir + fovMaskFile[:-4] + "_small" + fovMaskFile[-4:])
 
 
-def frangiFilter(image):
+def frangiFilter(image, fovImage):
     image = frangi(image)
     for y in range(image.shape[0]):
         for x in range(image.shape[1]):
+            if fovImage[y][x] == 0:
+                image[y][x] = 0
             if image[y][x] > 0.0000002:
                 image[y][x] = 255
             else:
@@ -45,8 +48,10 @@ def main():
 
     image = io.imread(dataDir + fileName)
     image = image[:, :, 1]
+    fovImage = plt.imread(fovMaskDir + fovMaskFile)
+    fovImage = fovImage[:, :, 1]
 
-    frangiImage = frangiFilter(image)
+    frangiImage = frangiFilter(image, fovImage)
 
     io.imshow(frangiImage)
     io.show()
