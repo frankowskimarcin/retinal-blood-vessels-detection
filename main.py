@@ -1,11 +1,13 @@
 import cv2
-from skimage import io, color
+from skimage import io, color, filters, measure
 from skimage.filters import frangi
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from skimage.morphology import erosion
 from sklearn.metrics import confusion_matrix
+from sklearn import neighbors
+import random
 
 
 def resizeInputImage(dataDir, fileName):
@@ -50,7 +52,7 @@ def main():
     fovMaskFile = fileName[:-4] + "_mask.tif"
     expertMaskDir = "data/healthy_manualsegm/"
     expertMaskFile = fileName[:-4] + ".tif"
-    resize = True
+    resize = False
 
     if resize:
         resizeInputImage(dataDir, fileName)
@@ -74,13 +76,74 @@ def main():
     frangiImage = frangiFilter(image, fovImage)
     frangiImage = erosion(frangiImage)
     frangiImage = frangiImage.astype(np.uint8)
-
     calculateEffectiveness(frangiImage, expertImage)
 
     # io.imshow(frangiImage)
     # io.show()
-    # io.imsave('data/output/out.jpg', frangiImage)
+    io.imsave('data/output/out.jpg', frangiImage)
+
+class drugie():
+    def __init__(self, fileName):
+        self.dataDir = "data/CHASEDB1/"
+        self.image = plt.imread(self.dataDir + fileName+".jpg")
+        self.image = filters.gaussian(self.image, 3)
+        self.center = [len(self.image)//2, len(self.image[0])//2]
+        self.expert = plt.imread(self.dataDir + fileName+"_1stHO.png")
+        self.classifier = neighbors.KNeighborsClassifier()
+
+    def statCalc(self, point):
+        frag = []
+        for i in range(-2, 3):
+            try:
+                frag.append(self.image[point[0]+i][point[1]-2: point[1]+3])
+            except:
+                pass
+        frag = np.array(frag)
+        sdr = np.var(frag[:,:,0].flatten())
+        sdg = np.var(frag[:,:,1].flatten())
+        sdb = np.var(frag[:,:,2].flatten())
+        gFrag = color.rgb2gray(frag)
+        centr = measure.moments_central(np.array(gFrag))
+        centrNorm = measure.moments_normalized(centr)
+        hu = measure.moments_hu(centrNorm)
+        result = []
+        result.append(sdr)
+        result.append(sdg)
+        result.append(sdb)
+        for i in hu:
+            result.append(i)
+        return result
+
+
+    def run(self):
+        points = []
+        params = []
+        labels = []
+        num = 10000
+        while num != 0:
+            y = random.randint(0, self.center[0])
+            x = random.randint(0, self.center[1])
+            if [x, y] not in points and np.sum(self.image[x, y])!=0:
+                points.append([x, y])
+                params.append(self.statCalc([x, y]))
+                labels.append(self.expert[x, y])
+                num -= 1
+        self.classifier.fit(params, labels)
+        resImg = np.zeros((len(self.image), len(self.image[0])))
+        for i in range(len(self.image)):
+            for j in range(len(self.image[0])):
+                if np.sum(self.image[i, j])!=0:
+                    stat = self.statCalc([i, j])
+                    resImg[i,j] = self.classifier.predict([stat])[0]
+            print(i)
+        plt.imshow(resImg)
+        plt.show()
+
+
+
 
 
 if __name__ == '__main__':
-    main()
+    a = drugie("Image_01L")
+    a.run()
+    #main()
