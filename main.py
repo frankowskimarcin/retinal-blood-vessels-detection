@@ -278,7 +278,7 @@ if __name__ == '__main__':
         masks.append((io.imread("data/healthy_manualsegm/"+i+".tif")/255).flatten())
     train_data = tf.data.Dataset.from_tensor_slices((images, masks))'''
     imgs = images.ImagesSampler(jpegs[0:15])
-    tmp = imgs.slices(3500)
+    tmp = imgs.slices(10)
     train_img, val_img, train_mask, val_mask = model_selection.train_test_split(tmp[0], tmp[1], test_size=0.15, random_state=42)
     img_test = image.img_to_array(image.load_img("data/48.png", color_mode="grayscale"))
     a = UNet()

@@ -20,28 +20,31 @@ class ImageSampler():
     def __init__(self, name):
         #self.image = image.img_to_array(image.load_img("data/healthy/"+name+".jpg", color_mode="grayscale"))
         self.image = io.imread("data/healthy/"+name+".jpg", as_gray=True)
+        image.array_to_img(to_keras_img(self.image)).show()
         self.mask = image.img_to_array(image.load_img("data/healthy_manualsegm/"+name+".tif", color_mode="grayscale"))/255
         self.fov = image.img_to_array(image.load_img("data/healthy_fovmask/"+name+"_mask.tif", color_mode="grayscale"))
         self.width = [len(self.image), len(self.image[0])]
 
+    def imagee(self):
+        return np.copy(self.image)
+
     def normalize(self, std, mean):
-        self.image = (self.img-mean)/std
+        self.image = (self.image-mean)/std
         self.image = ((self.image - np.min(self.image)) / (np.max(self.image) - np.min(self.image))) * 255
 
-    def  clahe(self):
+    def clahe(self):
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        img_equalized = np.empty(self.img.shape)
-        img_equalized[0] = clahe.apply(np.array(self.img[0], dtype=np.uint8))
-        self.image = img_equalized
+        self.image = clahe.apply(self.image.astype(np.uint8))
 
     def gamma(self):
         invGamma = 1.0 / 1.2
         table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-        self.image[0] = cv2.LUT(np.array(self.image[0], dtype = np.uint8), table)
+        self.image = cv2.LUT(np.array(self.image, dtype = np.uint8), table)
 
     def toFloat(self):
         self.image = self.image/255
         self.image = to_keras_img(self.image)
+        image.array_to_img(self.image).show()
 
 
     def slice(self, n):
@@ -74,11 +77,14 @@ class ImagesSampler():
     def __init__(self, names):
         self.imagess = []
         self.images = []
+        images = []
         self.masks = []
         for i in names:
-            self.imagess.append(ImageSampler(i))
-        std = np.std(self.images)
-        mean = np.mean(self.images)
+            a = ImageSampler(i)
+            self.imagess.append(a)
+            images.append(a.imagee())
+        std = np.std(images)
+        mean = np.mean(images)
         for i in self.imagess:
             i.normalize(std, mean)
             i.clahe()
@@ -92,17 +98,11 @@ class ImagesSampler():
             self.masks += tmp[1]
         return np.array(self.images), np.array(self.masks)
 
-    def histo_equalized():
-        imgs_equalized = np.empty(imgs.shape)
-        for i in range(imgs.shape[0]):
-            imgs_equalized[i, 0] = cv2.equalizeHist(np.array(imgs[i, 0], dtype=np.uint8))
-        return imgs_equalized
-
 
 
 
 
 
 if __name__ == "__main__":
-    a = ImagesSampler(["01_h", "02_h"])
+    a = ImagesSampler(["01_h"])
     a.slices(3)
