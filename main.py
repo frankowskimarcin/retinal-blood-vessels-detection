@@ -2,7 +2,6 @@ from skimage import io, color, filters, measure, transform
 from skimage.filters import frangi
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
 from skimage.morphology import erosion
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn import neighbors, tree, model_selection
@@ -95,7 +94,7 @@ class First:
         io.imsave('data/output/out.jpg', frangiImage)
 
 
-class drugie():
+class Second():
     def __init__(self, train):
         self.dataDir = "data/healthy/"
         self.images = []
@@ -201,71 +200,28 @@ class drugie():
         print("end {}".format(imgname))
         io.imsave('data/output/' + imgname + '_tree_out.png', resImg)
 
-
-class UNet:
-
-    def __init__(self):
-        self.model = None
-
-    def buildNetwork(self, start_neurons, x, y):
-        input_layer = layers.Input((x, y, 1))
-
-        conv1 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(input_layer)
-        conv1 = layers.Dropout(0.2)(conv1)
-        conv1 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(conv1)
-        pool1 = layers.MaxPooling2D((2, 2))(conv1)
-        #
-        conv2 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(pool1)
-        conv2 = layers.Dropout(0.2)(conv2)
-        conv2 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(conv2)
-        pool2 = layers.MaxPooling2D((2, 2))(conv2)
-        #
-        conv3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(pool2)
-        conv3 = layers.Dropout(0.2)(conv3)
-        conv3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
-
-        up1 = layers.UpSampling2D(size=(2, 2))(conv3)
-        up1 = layers.concatenate([conv2, up1], axis=3)
-        conv4 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(up1)
-        conv4 = layers.Dropout(0.2)(conv4)
-        conv4 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(conv4)
-        #
-        up2 = layers.UpSampling2D(size=(2, 2))(conv4)
-        up2 = layers.concatenate([conv1, up2], axis=3)
-        conv5 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(up2)
-        conv5 = layers.Dropout(0.2)(conv5)
-        conv5 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(conv5)
-        #
-        conv6 = layers.Conv2D(1, (1, 1), activation='relu', padding='same')(conv5)
-        # conv6 = layers.Reshape((2, 128*128))(conv6)
-        # conv6 = layers.Permute((2, 1))(conv6)
-        ############
-        output_layer = layers.Activation('softmax')(conv6)
-        # output_layer = layers.Conv2D(1, (1,1), padding="same", activation="sigmoid")(conv6)
-
-        self.model = keras.Model(input_layer, output_layer)
-        self.model.compile(loss="binary_crossentropy", optimizer="sgd", metrics=["accuracy"])
-        self.model.summary()
-
-    def train(self, x, y, x2, y2, n):
-        early_stopping = tf.keras.callbacks.EarlyStopping(patience=10, verbose=1)
-        model_checkpoint = tf.keras.callbacks.ModelCheckpoint("model/model.h5", save_best_only=True, verbose=1)
-        # reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(factor=0.1, patience=5, min_lr=0.00001, verbose=1)
-        epochs = 150
-        self.model.fit(x, y, batch_size=32, epochs=epochs, validation_data=(x2, y2), callbacks=[model_checkpoint])
-        odp = self.model.predict(n, batch_size=1)
-        tf.keras.preprocessing.image.array_to_img(odp[0]).show()
+class SecondShow():
+    def __init__(self, name):
+        self.image = io.imread("data/healthy/"+name)
+        self.mask = io.imread("data/healthy_manualsegm/"+name[0:name.find(".")]+".tif")
+        self.result = io.imread("data/output/"+name[0:name.find(".")]+"_tree_out.jpg")
+        for i in range(self.result.shape[0]):
+            for j in range(self.result.shape[1]):
+                if(self.result[i,j]>220):
+                    self.result[i,j] = 255
+                else:
+                    self.result[i, j] = 0
 
 
-def dyn_weighted_bincrossentropy(true, pred):
-    num_pred = keras.backend.sum(keras.backend.cast(pred < 0.5, true.dtype)) + keras.backend.sum(true)
-    zero_weight = keras.backend.sum(true) / num_pred + keras.backend.epsilon()
-    one_weight = keras.backend.sum(keras.backend.cast(pred < 0.5, true.dtype)) / num_pred + keras.backend.epsilon()
-    weights = (1.0 - true) * zero_weight + true * one_weight
-    bin_crossentropy = keras.backend.binary_crossentropy(true, pred)
-    weighted_bin_crossentropy = weights * bin_crossentropy
+    def show(self):
+        io.imshow(self.result)
+        io.show()
+        io.imshow(self.image)
+        io.show()
+        calculateEffectiveness(self.result, self.mask)
 
-    return keras.backend.mean(weighted_bin_crossentropy)
+
+
 
 
 def starting_process():
@@ -275,21 +231,6 @@ def starting_process():
 if __name__ == '__main__':
     jpegs = ["01_h", "02_h", "03_h", "04_h", "05_h", "06_h", "07_h",
              "08_h", "09_h", "10_h", "11_h", "12_h", "13_h", "14_h", "15_h"]
-    '''images = []
-    masks = []
-    for i in jpegs[0:4]:
-        images.append((color.rgb2gray(io.imread("data/healthy/"+i+".jpg"))).flatten())
-        masks.append((io.imread("data/healthy_manualsegm/"+i+".tif")/255).flatten())
-    train_data = tf.data.Dataset.from_tensor_slices((images, masks))'''
-    # imgs = images.ImagesSampler(jpegs[0:15])
-    # tmp = imgs.slices(10)
-    # train_img, val_img, train_mask, val_mask = model_selection.train_test_split(tmp[0], tmp[1], test_size=0.15,
-    #                                                                             random_state=42)
-    # img_test = image.img_to_array(image.load_img("data/48.png", color_mode="grayscale"))
-    # a = UNet()
-    # a.buildNetwork(16, 48, 48)
-    # a.train(train_img, train_mask, val_img, val_mask, np.array([img_test / 255]))
-
     '''a = drugie(jpegs[0:10])
     a.trainTree()
     #for i in jpegs:
@@ -306,5 +247,7 @@ if __name__ == '__main__':
     # for i in jpegs[10:16]:
     # a.run(i)
     # main()
-    f = First("02_h.jpg")
-    f.execute()
+    s = SecondShow("02_h.jpg")
+    s.show()
+    #f = First("02_h.jpg")
+    #f.execute()
