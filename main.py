@@ -33,6 +33,23 @@ def calculateEffectiveness(image, expertImage):
     spec = tn / (tn + fp) if tn + fp != 0 else 0  # specificity
     print("Accuracy: {}, Sensitivity: {}, Specificity: {}".format(acc, sens, spec))
 
+    detected_true = 0
+    detected_false = 0
+    all_white = 0
+
+    for i in range(len(image)):
+        if expertImage[i]:
+            all_white += 1
+            if image[i]:
+                detected_true += 1
+        else:
+            if image[i]:
+                detected_false += 1
+
+    print("Percentage true detected: {}\nPercentage false detected: {}"
+          .format(detected_true/all_white*100,
+                  detected_false/(detected_true+detected_false)*100))
+
 
 class First:
 
@@ -200,18 +217,18 @@ class Second():
         print("end {}".format(imgname))
         io.imsave('data/output/' + imgname + '_tree_out.png', resImg)
 
+
 class SecondShow():
     def __init__(self, name):
-        self.image = io.imread("data/healthy/"+name)
-        self.mask = io.imread("data/healthy_manualsegm/"+name[0:name.find(".")]+".tif")
-        self.result = io.imread("data/output/"+name[0:name.find(".")]+"_tree_out.jpg")
+        self.image = io.imread("data/healthy/" + name)
+        self.mask = io.imread("data/healthy_manualsegm/" + name[0:name.find(".")] + ".tif")
+        self.result = io.imread("data/output/" + name[0:name.find(".")] + "_tree_out.jpg")
         for i in range(self.result.shape[0]):
             for j in range(self.result.shape[1]):
-                if(self.result[i,j]>220):
-                    self.result[i,j] = 255
+                if (self.result[i, j] > 220):
+                    self.result[i, j] = 255
                 else:
                     self.result[i, j] = 0
-
 
     def show(self):
         io.imshow(self.result)
@@ -219,9 +236,6 @@ class SecondShow():
         io.imshow(self.image)
         io.show()
         calculateEffectiveness(self.result, self.mask)
-
-
-
 
 
 def starting_process():
@@ -247,7 +261,7 @@ if __name__ == '__main__':
     # for i in jpegs[10:16]:
     # a.run(i)
     # main()
-    s = SecondShow("02_h.jpg")
-    s.show()
-    #f = First("02_h.jpg")
-    #f.execute()
+    # s = SecondShow("02_h.jpg")
+    # s.show()
+    f = First("04_h.jpg")
+    f.execute()
